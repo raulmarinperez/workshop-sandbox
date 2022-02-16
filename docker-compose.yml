@@ -17,7 +17,7 @@ services:
   agent:
     image: grafana/agent:latest
     volumes:
-      - ./agent/config:/etc/agent-config
+      - ./config:/etc/agent-config
       - /var/log:/var/log
     entrypoint:
       - /bin/agent
