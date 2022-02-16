@@ -8,7 +8,7 @@ This is what the sandbox provides/covers at the moment:
    - Container mimicking a Database service (db)
    - Container mimicking an Application service (app)
    - Container producing some load on the previous services (loadgen)
-2. Grafana Cloud as the Observability Stack to handle metrics and logs; **spin up your own Grafana Cloud Free (forver) Tier** by visiting [this link](https://grafana.com/auth/sign-up/create-user).
+2. Grafana Cloud as the Observability Stack to handle metrics and logs; **spin up your own Grafana Cloud Free (forever) Tier** by visiting [this link](https://grafana.com/auth/sign-up/create-user).
 
 Additional elements will be introduced over time to address more advanced scenarios such us:
 
