@@ -1,5 +1,5 @@
 # The Observability Workshop Sandbox
-Welcome to the *Observability Workshop Sandbox* repo, a place where I'll be consolidating resources I found here and there aiming to easily reproduce some of the most typical scenarios SREs and DevOps teams have to deal with day in day out.
+Welcome to the *Observability Workshop Sandbox* repo, a place where I'll be consolidating resources I find here and there aiming to easily reproduce some of the most typical scenarios SREs and DevOps teams have to deal with day in day out.
 
 This is what the sandbox provides/covers at the moment:
 
