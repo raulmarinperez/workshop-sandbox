@@ -1,0 +1,39 @@
+# Sample config for Grafana Agent
+# For a full configuration reference, see: https://github.com/grafana/agent/blob/main/docs/configuration-reference.md.
+server:
+  http_listen_address: '127.0.0.1'
+  http_listen_port: 12345
+
+metrics:
+  global:
+    scrape_interval: 1m
+    remote_write:
+      - url: <replace it with your own URL>
+        basic_auth:
+          username: <replace it with your user id>
+          password: <replace it with your password>
+  wal_directory: '/var/lib/grafana-agent'
+  configs:
+    # Example Prometheus scrape configuration to scrape the agent itself for metrics.
+    # This is not needed if the agent integration is enabled.
+    - name: agent
+      host_filter: false
+      scrape_configs:
+        - job_name: 'tns/app'
+          static_configs:
+            - targets: ['app:80']
+        - job_name: 'tns/db'
+          static_configs:
+          - targets: ['db:80']
+        - job_name: 'tns/loadgen'
+          static_configs:
+            - targets: ['loadgen:80']
+
+integrations:
+  agent:
+    enabled: true
+  node_exporter:
+    enabled: true
+    include_exporter_metrics: true
+    disable_collectors:
+      - "mdadm"

@@ -1,0 +1,63 @@
+x-logging: &default-logging
+  driver: loki
+  options:
+    loki-url: <replace it with your own URL>
+    labels: namespace
+    loki-relabel-config: |
+      - action: replace
+        source_labels: ["namespace","compose_service"]
+        separator: "/"
+        target_label: job
+      - action: replace
+        source_labels: ["container_name"]
+        target_label: instance
+
+version: '3.4'
+services:
+  agent:
+    image: grafana/agent:latest
+    volumes:
+      - ./agent/config:/etc/agent-config
+      - /var/log:/var/log
+    entrypoint:
+      - /bin/agent
+      - -config.file=/etc/agent-config/agent.yaml
+      - -prometheus.wal-directory=/tmp/agent/wal
+    ports:
+      - "12345:12345"
+  db:
+    image: grafana/tns-db:latest
+    command:
+      - '-log.level=debug'
+    ports:
+      - 0.0.0.0:8000:80
+    labels:
+      namespace: tns
+    logging: *default-logging
+
+  app:
+    image: grafana/tns-app:latest
+    command:
+      - '-log.level=debug'
+      - 'http://db'
+    links:
+      - db
+    ports:
+      - 0.0.0.0:8001:80
+    labels:
+      namespace: tns
+    logging: *default-logging
+
+  loadgen:
+    image: grafana/tns-loadgen:latest
+    command:
+      - '-log.level=debug'
+      - 'http://app'
+    links:
+      - app
+    ports:
+      - 0.0.0.0:8002:80
+    labels:
+      namespace: tns
+    logging: *default-logging
+
