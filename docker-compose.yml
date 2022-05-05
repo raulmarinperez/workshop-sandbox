@@ -1,7 +1,7 @@
 x-logging: &default-logging
   driver: loki
   options:
-    loki-url: https://120909:eyJrIjoiMmJjNTAwYmI1MWM1NTMwYmIyMjY1YWRjZGUxNDRhMzAzZmE2MTAxMSIsIm4iOiJzYW5kYm94IiwiaWQiOjUxOTM4MX0=@logs-prod-eu-west-0.grafana.net/loki/api/v1/push
+    loki-url: <put your loki url here>
     labels: namespace
     loki-relabel-config: |
       - action: replace
