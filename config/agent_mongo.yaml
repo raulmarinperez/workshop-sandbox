@@ -1,0 +1,27 @@
+# Sample config for Grafana Agent
+# For a full configuration reference, see: https://github.com/grafana/agent/blob/main/docs/configuration-reference.md.
+server:
+  http_listen_address: '127.0.0.1'
+  http_listen_port: 12345
+
+metrics:
+  global:
+    scrape_interval: 15s
+    remote_write:
+      - url: <put your prometheus compatible push endpoint here>
+        basic_auth:
+          username: <put your username here>
+          password: <put your password here>
+  wal_directory: '/var/lib/grafana-agent'
+integrations:
+  agent:
+    enabled: true
+  node_exporter:
+    enabled: true
+    include_exporter_metrics: true
+    disable_collectors:
+      - "mdadm"
+  mongodb_exporter:
+    enabled: true
+    instance: mongodb
+    mongodb_uri: mongodb://mongo:27017/

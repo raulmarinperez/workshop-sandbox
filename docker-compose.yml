@@ -1,7 +1,7 @@
 x-logging: &default-logging
   driver: loki
   options:
-    loki-url: <replace it with your own URL>
+    loki-url: https://120909:eyJrIjoiMmJjNTAwYmI1MWM1NTMwYmIyMjY1YWRjZGUxNDRhMzAzZmE2MTAxMSIsIm4iOiJzYW5kYm94IiwiaWQiOjUxOTM4MX0=@logs-prod-eu-west-0.grafana.net/loki/api/v1/push
     labels: namespace
     loki-relabel-config: |
       - action: replace
@@ -13,8 +13,12 @@ x-logging: &default-logging
         target_label: instance
 
 version: '3.4'
+volumes:
+  mongodb-vol:
+
 services:
   agent:
+    profiles: ["tnsapp","agent","mongo"]
     image: grafana/agent:latest
     volumes:
       - ./config:/etc/agent-config
@@ -25,7 +29,9 @@ services:
       - -prometheus.wal-directory=/tmp/agent/wal
     ports:
       - "12345:12345"
+    logging: *default-logging
   db:
+    profiles: ["tnsapp"]
     image: grafana/tns-db:latest
     command:
       - '-log.level=debug'
@@ -36,6 +42,7 @@ services:
     logging: *default-logging
 
   app:
+    profiles: ["tnsapp"]
     image: grafana/tns-app:latest
     command:
       - '-log.level=debug'
@@ -49,6 +56,7 @@ services:
     logging: *default-logging
 
   loadgen:
+    profiles: ["tnsapp"]
     image: grafana/tns-loadgen:latest
     command:
       - '-log.level=debug'
@@ -61,3 +69,11 @@ services:
       namespace: tns
     logging: *default-logging
 
+  mongo:
+    profiles: ["mongo"]
+    image: mongo:4.4
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-vol:/data/db
+    logging: *default-logging
