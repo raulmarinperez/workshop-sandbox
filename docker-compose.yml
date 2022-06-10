@@ -28,6 +28,8 @@ services:
     image: grafana/agent:latest
     hostname: grafana-agent
     container_name: agent
+    networks:
+      - web-shop
     volumes:
       - ./config:/etc/agent-config
       - /var/log:/var/log
@@ -37,6 +39,8 @@ services:
       - -prometheus.wal-directory=/tmp/agent/wal
     ports:
       - "12345:12345"
+      - "1234:1234"
+      - "4137:4137"
     logging: *default-logging
 
   db:
@@ -173,7 +177,7 @@ services:
       - "5555:5555"
     environment:
       SQLALCHEMY_DATABASE_URI: mariadb+mariadbconnector://root:myrootpassword@mariadb:3306/webshop
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://tempo:4317
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://agent:4317
     depends_on:
       mariadb:
         condition: service_healthy
