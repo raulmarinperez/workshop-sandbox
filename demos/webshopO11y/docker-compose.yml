@@ -1,0 +1,153 @@
+x-logging: &default-logging
+  driver: loki
+  options:
+    loki-url: https://120909:eyJrIjoiMmJjNTAwYmI1MWM1NTMwYmIyMjY1YWRjZGUxNDRhMzAzZmE2MTAxMSIsIm4iOiJzYW5kYm94IiwiaWQiOjUxOTM4MX0=@logs-prod-eu-west-0.grafana.net/loki/api/v1/push
+    labels: namespace
+    loki-relabel-config: |
+      - action: replace
+        source_labels: ["namespace","compose_service"]
+        separator: "/"
+        target_label: job
+      - action: replace
+        source_labels: ["container_name"]
+        target_label: instance
+
+version: '3.4'
+
+networks:
+  web-shop:
+    driver: bridge
+
+services:
+  agent:
+    image: grafana/agent:latest
+    hostname: grafana-agent
+    container_name: agent
+    networks:
+      - web-shop
+    volumes:
+      - ./config:/etc/agent-config
+      - /var/log:/var/log
+    entrypoint:
+      - /bin/agent
+      - -config.file=/etc/agent-config/agent.yaml
+      - -prometheus.wal-directory=/tmp/agent/wal
+    ports:
+      - "12345:12345"
+      - "1234:1234"
+      - "4137:4137"
+    logging: *default-logging
+
+  mariadb:
+    image: mariadb:latest
+    container_name: mariadb
+    logging: *default-logging
+    ports:
+      - "3306:3306"
+    environment:
+      MARIADB_ROOT_PASSWORD: myrootpassword
+      MARIADB_DATABASE: webshop
+    networks:
+      - web-shop
+    healthcheck:
+      test: mysqladmin ping -h 127.0.0.1 -uroot -pmyrootpassword
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - web-shop
+
+  broker:
+    image: confluentinc/cp-server:7.0.1
+    hostname: broker
+    container_name: broker
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "9101:9101"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_CREATE_TOPICS: audit:1:1,networkevents:1:1,webserverlogs:1:1,dbcommits:1:1,machine1:1:1,machine2:1:1
+      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:29092
+      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+      CONFLUENT_METRICS_ENABLE: 'true'
+      CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
+    networks:
+      - web-shop
+
+  shopping-cart:
+    image: "condla/shopping-cart:1.0"
+    container_name: shopping-cart
+    logging: *default-logging
+    ports:
+      - "5555:5555"
+    environment:
+      SQLALCHEMY_DATABASE_URI: mariadb+mariadbconnector://root:myrootpassword@mariadb:3306/webshop
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://agent:4317
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    networks:
+      - web-shop
+
+  products:
+    image: "condla/products:otel-1.0"
+    container_name: products
+    logging: *default-logging
+    ports:
+      - "8080:8080"
+    environment:
+      OTEL_METRICS_EXPORTER: "none"
+      OTEL_EXPORTER: "otlp_span"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://agent:4317"
+      OTEL_RESOURCE_ATTRIBUTES: "service.name=products,team.name=backend,environment=production"
+      JAVA_OPTS: "-javaagent:/opentelemetry-javaagent.jar"
+    networks:
+      - web-shop
+    depends_on:
+      - "shopping-cart"
+      - "broker"
+
+  web-shop:
+    image: "condla/web-shop:1.0"
+    container_name: web-shop
+    logging: *default-logging
+    ports:
+      - "3389:6666"
+    depends_on:
+      - "shopping-cart"
+    networks:
+      - web-shop
+    restart: on-failure
+
+#  shop-simulator:
+#    image: "condla/shop-simulator:1.0"
+#    depends_on:
+#      - "web-shop"
+#    networks:
+#      - web-shop
+#    restart: on-failure

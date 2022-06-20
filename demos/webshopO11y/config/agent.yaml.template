@@ -1,0 +1,53 @@
+# Sample config for Grafana Agent
+# For a full configuration reference, see: https://github.com/grafana/agent/blob/main/docs/configuration-reference.md.
+server:
+  http_listen_address: '127.0.0.1'
+  http_listen_port: 12345
+
+metrics:
+  global:
+    scrape_interval: 15s
+    remote_write:
+      - url: <Prometheus compatible remote write's API>
+        basic_auth:
+          username: <user name or instance ID if using Grafana Cloud>
+          password: <password or API Key if using Grafana Cloud>
+  wal_directory: '/var/lib/grafana-agent'
+
+integrations:
+  agent:
+    enabled: true
+  node_exporter:
+    enabled: true
+    include_exporter_metrics: true
+    disable_collectors:
+      - "mdadm"
+
+logs:
+  configs:
+  - name: loki
+    clients:
+      - url: <Loki endpoint for pushing logs>
+        external_labels:
+          job: grafana-agent
+  positions_directory: /tmp/positions
+
+traces:
+  configs:
+  - name: latencyEndpoint
+    remote_write:
+      - endpoint: <Tempo compatible remote write's API>
+        basic_auth:
+          username: <user name or instance ID if using Grafana Cloud>
+          password: <password or API Key if using Grafana Cloud>
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+          http:
+    spanmetrics:
+      dimensions:
+        - name: http.method
+        - name: http.target
+        - name: team.name
+      handler_endpoint: 0.0.0.0:1234
